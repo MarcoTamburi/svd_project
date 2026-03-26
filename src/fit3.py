@@ -27,9 +27,8 @@ def run_fit3(config_path: str):
 
     pack = read_params_csv(cfg["params_csv"])
     T, V_prime = load_T_and_Vprime(
-        cfg["data"]["T_path"],
-        cfg["data"]["T_column"],
-        cfg["data"]["V_prime_path"],
+    cfg["data"]["T_path"],
+    cfg["data"]["V_prime_path"],
     )
 
     method = cfg.get("fit", {}).get("method", "trf")

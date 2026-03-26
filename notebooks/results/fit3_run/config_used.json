@@ -1,0 +1,18 @@
+{
+  "data": {
+    "T_path": "data/dati_puliti.csv",
+    "T_column": "T_kelvin",
+    "V_prime_path": "data/V_prime.csv"
+  },
+  "params_csv": "params/params_fit3.csv",
+  "output_dir": "results/fit3_run",
+  "fit": {
+    "method": "trf",
+    "max_nfev": 2000
+  },
+  "monte_carlo": {
+    "enabled": false,
+    "sigma": 0.002,
+    "n_iter": 200
+  }
+}
