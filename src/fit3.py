@@ -15,7 +15,7 @@ def residuals_stub(x_full, T, V_prime):
     # per ora residuo finto: zero, giusto per testare la pipeline
     return np.zeros(V_prime.size, dtype=float)
 
-def run_fit3(config_path: str):
+def run_fit3(config_path: str, run_metadata: dict):
     cfg = load_config(config_path)
 
     out_dir = Path(cfg["output_dir"])
@@ -61,6 +61,9 @@ def run_fit3(config_path: str):
     write_params_csv(pack, str(out_dir / "params_final.csv"), x_full_2)
 
     summary = {
+        "run_timestamp": run_metadata["run_timestamp"],
+        "config_path": run_metadata["config_path"],
+        "n_components": run_metadata["n_components"],
         "stage1_success": bool(res1.success),
         "stage1_cost": float(res1.cost),
         "stage2_success": bool(res2.success),

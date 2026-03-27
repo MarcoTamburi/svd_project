@@ -1,4 +1,7 @@
 {
+  "run_timestamp": "2026-03-27 11:26:23",
+  "config_path": "../configs/fit3_config.json",
+  "n_components": 3,
   "stage1_success": true,
   "stage1_cost": 0.0,
   "stage2_success": true,
