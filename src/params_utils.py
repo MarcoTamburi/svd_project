@@ -90,3 +90,16 @@ def write_params_csv(pack: ParamPack, out_path: str, x_full: np.ndarray) -> None
 
 def unpack_params(x_full: np.ndarray, name_to_i: Dict[str, int]) -> Dict[str, float]:
     return {k: float(x_full[i]) for k, i in name_to_i.items()}
+
+def update_pack_values(pack, updates: dict):
+    for name, value in updates.items():
+        if name not in pack.name_to_i:
+            raise KeyError(f"Parametro '{name}' non trovato nel ParamPack")
+
+        idx = pack.name_to_i[name]
+        pack.x0_full[idx] = float(value)
+
+        if "value" in pack.df.columns:
+            pack.df.loc[pack.df["name"] == name, "value"] = float(value)
+
+    return pack
