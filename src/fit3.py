@@ -1,10 +1,8 @@
-# src/fit3.py
 import json
 from pathlib import Path
 import numpy as np
 from scipy.optimize import least_squares
 from sklearn.linear_model import LinearRegression
-R = 1.987  # gas constant in cal/(mol*K)
 
 from params_utils import (
     read_params_csv,
@@ -15,60 +13,16 @@ from params_utils import (
     update_pack_values,
 )
 from io_utils import load_fit3_inputs
+from model_fit3 import (
+    predict_vprime_from_params,
+    residuals_fit3,
+)
 
 
 def load_config(path: str) -> dict:
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
-
-def calc_M_2p(T, Tm1, Tm2, dH1, dH2):
-    A = np.exp(-dH1 / R * (1 / Tm1 - 1 / T))
-    B = np.exp(-dH2 / R * (1 / Tm2 - 1 / T))
-
-    denom = 1 + A + (A * B)
-
-    M1 = 1 / denom
-    M2 = A / denom
-    M3 = (A * B) / denom
-
-    return np.stack([M1, M2, M3], axis=0)  # shape (3, len(T))
-
-
-def residuals_fit3(x_full, T, V_prime, pack):
-    def get(name):
-        return float(x_full[pack.name_to_i[name]])
-
-    Tm1 = get("Tm1")
-    Tm2 = get("Tm2")
-    dH1 = get("dH1")
-    dH2 = get("dH2")
-
-    C11 = get("C11")
-    C12 = get("C12")
-    C13 = get("C13")
-    C21 = get("C21")
-    C22 = get("C22")
-    C23 = get("C23")
-    C31 = get("C31")
-    C32 = get("C32")
-    C33 = get("C33")
-
-    C = np.array([
-        [C11, C12, C13],
-        [C21, C22, C23],
-        [C31, C32, C33]
-    ], dtype=float)
-
-    M = calc_M_2p(T, Tm1, Tm2, dH1, dH2)   # shape (3, len(T))
-    f_pred = C @ M                         # shape (3, len(T))
-
-    resid = (V_prime - f_pred).flatten()
-
-    if np.any(np.isnan(resid)) or np.any(np.isinf(resid)):
-        return np.full(V_prime.size, 1e12, dtype=float)
-
-    return resid
 
 def estimate_edge_coefficients(U_prime, spectral_matrix):
     # spectral_matrix shape attesa: (n_lambda, n_temperatures)
@@ -123,6 +77,7 @@ def estimate_edge_coefficients(U_prime, spectral_matrix):
 
     return coeffs, debug_data
 
+
 def save_preprocessing_outputs(out_dir, wavelengths, preprocess_debug):
     import pandas as pd
     from matplotlib import pyplot as plt
@@ -173,36 +128,10 @@ def save_preprocessing_outputs(out_dir, wavelengths, preprocess_debug):
     plt.close()
 
 
-
 def save_final_fit_plots(out_dir, T, V_prime, x_full, pack):
     from matplotlib import pyplot as plt
 
-    def get(name):
-        return float(x_full[pack.name_to_i[name]])
-
-    Tm1 = get("Tm1")
-    Tm2 = get("Tm2")
-    dH1 = get("dH1")
-    dH2 = get("dH2")
-
-    C11 = get("C11")
-    C12 = get("C12")
-    C13 = get("C13")
-    C21 = get("C21")
-    C22 = get("C22")
-    C23 = get("C23")
-    C31 = get("C31")
-    C32 = get("C32")
-    C33 = get("C33")
-
-    C = np.array([
-        [C11, C12, C13],
-        [C21, C22, C23],
-        [C31, C32, C33]
-    ], dtype=float)
-
-    M = calc_M_2p(T, Tm1, Tm2, dH1, dH2)
-    f_pred = C @ M
+    _, _, f_pred = predict_vprime_from_params(T, x_full, pack)
 
     labels = ["V1_prime", "V2_prime", "V3_prime"]
 
@@ -224,9 +153,6 @@ def save_final_fit_plots(out_dir, T, V_prime, x_full, pack):
     return f_pred
 
 
-
-
-
 def save_final_fit_data(out_dir, T, V_prime, f_pred):
     import pandas as pd
 
@@ -246,7 +172,7 @@ def save_final_fit_data(out_dir, T, V_prime, f_pred):
 
     df.to_csv(out_dir / "final_fit_curves.csv", index=False)
 
-    
+
 def run_fit3(config_path: str, run_metadata: dict):
     cfg = load_config(config_path)
 
@@ -261,13 +187,11 @@ def run_fit3(config_path: str, run_metadata: dict):
     out_dir = base_out_dir / run_name
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # salva config usata
     with open(out_dir / "config_used.json", "w", encoding="utf-8") as f:
         json.dump(cfg, f, indent=2)
 
     pack = read_params_csv(cfg["params_csv"])
 
-    # nuovo loader coerente coi file reali
     T, V_prime, U_prime, spectral_matrix, wavelengths = load_fit3_inputs(
         cfg["data"]["spectra_matrix_path"],
         cfg["data"]["V_prime_path"],
@@ -294,7 +218,6 @@ def run_fit3(config_path: str, run_metadata: dict):
     method = cfg.get("fit", {}).get("method", "trf")
     max_nfev = cfg.get("fit", {}).get("max_nfev", None)
 
-    # stage 1
     free_mask_1 = stage_free_mask(pack, "1")
     x0_1, lb_1, ub_1 = extract_free(pack, free_mask_1)
 
@@ -347,13 +270,11 @@ def run_fit3(config_path: str, run_metadata: dict):
     x_full_1 = inject_free(pack, free_mask_1, res1.x)
     write_params_csv(pack, str(out_dir / "params_after_stage1.csv"), x_full_1)
 
-    # aggiorno pack con i risultati stage 1, così stage 2 parte da lì
     pack.x0_full = x_full_1
 
     if "value" in pack.df.columns:
         pack.df["value"] = x_full_1
 
-    # stage 2
     free_mask_2 = stage_free_mask(pack, "2")
     x0_2, lb_2, ub_2 = extract_free(pack, free_mask_2)
 
@@ -381,24 +302,18 @@ def run_fit3(config_path: str, run_metadata: dict):
     if save_final_fit_plots_flag:
         f_pred_final = save_final_fit_plots(out_dir, T, V_prime, x_full_2, pack)
     else:
-        f_pred_final = None
+        _, _, f_pred_final = predict_vprime_from_params(T, x_full_2, pack)
 
     final_params = {
         name: float(x_full_2[idx]) for name, idx in pack.name_to_i.items()
     }
 
-    if f_pred_final is not None:
-        save_final_fit_data(out_dir, T, V_prime, f_pred_final)
+    save_final_fit_data(out_dir, T, V_prime, f_pred_final)
 
-    chi2 = None
-    chi2_red = None
-
-    if f_pred_final is not None:
-        residuals_final = V_prime - f_pred_final
-        chi2 = float(np.sum(residuals_final ** 2))
-        dof = V_prime.size - len(res2.x)
-        if dof > 0:
-            chi2_red = float(chi2 / dof)
+    residuals_final = V_prime - f_pred_final
+    chi2 = float(np.sum(residuals_final ** 2))
+    dof = V_prime.size - len(res2.x)
+    chi2_red = float(chi2 / dof) if dof > 0 else None
 
     write_params_csv(pack, str(out_dir / "params_final.csv"), x_full_2)
 
