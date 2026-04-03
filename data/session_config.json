@@ -1,7 +1,0 @@
-{
-  "n_components": 3,
-  "matrix_output_path": "/Users/marcotamburi/projects/uni_project/svd_project/data/matrice_con_t.dat",
-  "clean_output_path": "/Users/marcotamburi/projects/uni_project/svd_project/data/dati_puliti.csv",
-  "u_prime_path": "/Users/marcotamburi/projects/uni_project/svd_project/data/U_prime.csv",
-  "v_prime_path": "/Users/marcotamburi/projects/uni_project/svd_project/data/V_prime.csv"
-}
