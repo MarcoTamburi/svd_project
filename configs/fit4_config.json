@@ -1,11 +1,11 @@
 {
   "data": {
-    "spectra_matrix_path": "data/matrice_con_t.dat",
-    "V_prime_path": "data/V_prime.csv",
-    "U_prime_path": "data/U_prime.csv"
+    "spectra_matrix_path": "../data/matrice_con_t.dat",
+    "V_prime_path": "../data/V_prime.csv",
+    "U_prime_path": "../data/U_prime.csv"
   },
-  "params_csv": "params/params_fit4.csv",
-  "output_dir": "results/fit4_run",
+  "params_csv": "../params/params_fit4.csv",
+  "output_dir": "../results/fit4_run",
   "fit": {
     "method": "trf",
     "max_nfev": 1000
@@ -17,7 +17,7 @@
   },
   "plots": {
     "save_preprocess": true,
-    "save_final_fit": false
+    "save_final_fit": true
   },
   "debug": {
     "enabled": false

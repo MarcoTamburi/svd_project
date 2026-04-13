@@ -223,7 +223,7 @@ def run_fit3(config_path: str, run_metadata: dict):
     write_params_csv(pack, str(out_dir / "params_after_stage1.csv"), x_full_1)
 
     if save_final_fit_plots_flag:
-        save_stage1_fit_outputs(out_dir, T, V_prime, x_full_1, pack)
+        save_stage1_fit_outputs(out_dir, T, V_prime, x_full_1, pack, predict_vprime_from_params)
 
     pack.x0_full = x_full_1
 
@@ -255,7 +255,7 @@ def run_fit3(config_path: str, run_metadata: dict):
     x_full_2 = inject_free(pack, free_mask_2, res2.x)
 
     if save_final_fit_plots_flag:
-        f_pred_final = save_final_fit_outputs(out_dir, T, V_prime, x_full_2, pack)
+        f_pred_final = save_final_fit_outputs(out_dir, T, V_prime, x_full_2, pack, predict_vprime_from_params)
     else:
         _, _, f_pred_final = predict_vprime_from_params(T, x_full_2, pack)
 

@@ -1,24 +1,35 @@
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from model_fit3 import predict_vprime_from_params
 
+def save_vprime_fit_plots(
+    out_dir,
+    T,
+    V_prime,
+    x_full,
+    pack,
+    predict_fn,
+    plot_filename,
+    title,
+):
+    _, _, f_pred = predict_fn(T, x_full, pack)
 
-def save_vprime_fit_plots(out_dir, T, V_prime, x_full, pack, plot_filename, title):
-    _, _, f_pred = predict_vprime_from_params(T, x_full, pack)
+    n_components = V_prime.shape[0]
+    labels = [f"V{i+1}_prime" for i in range(n_components)]
 
-    labels = ["V1_prime", "V2_prime", "V3_prime"]
+    fig, axs = plt.subplots(n_components, 1, figsize=(10, 2.6 * n_components), sharex=True)
 
-    fig, axs = plt.subplots(3, 1, figsize=(10, 8), sharex=True)
+    if n_components == 1:
+        axs = [axs]
 
-    for i in range(3):
+    for i in range(n_components):
         axs[i].plot(T - 273.15, V_prime[i], "o", label="Experimental data")
         axs[i].plot(T - 273.15, f_pred[i], "-", label="Model fit")
         axs[i].set_ylabel(labels[i])
         axs[i].grid(True)
         axs[i].legend()
 
-    axs[2].set_xlabel("Temperature (°C)")
+    axs[-1].set_xlabel("Temperature (°C)")
     plt.suptitle(title)
     plt.tight_layout(rect=[0, 0, 1, 0.96])
     plt.savefig(out_dir / plot_filename, dpi=300)
@@ -28,32 +39,33 @@ def save_vprime_fit_plots(out_dir, T, V_prime, x_full, pack, plot_filename, titl
 
 
 def save_vprime_fit_data(out_dir, T, V_prime, f_pred, csv_filename):
-    df = pd.DataFrame({
+    data = {
         "T_kelvin": T,
         "T_celsius": T - 273.15,
-        "V1_exp": V_prime[0],
-        "V1_fit": f_pred[0],
-        "V1_resid": V_prime[0] - f_pred[0],
-        "V2_exp": V_prime[1],
-        "V2_fit": f_pred[1],
-        "V2_resid": V_prime[1] - f_pred[1],
-        "V3_exp": V_prime[2],
-        "V3_fit": f_pred[2],
-        "V3_resid": V_prime[2] - f_pred[2],
-    })
+    }
 
+    n_components = V_prime.shape[0]
+
+    for i in range(n_components):
+        idx = i + 1
+        data[f"V{idx}_exp"] = V_prime[i]
+        data[f"V{idx}_fit"] = f_pred[i]
+        data[f"V{idx}_resid"] = V_prime[i] - f_pred[i]
+
+    df = pd.DataFrame(data)
     df.to_csv(out_dir / csv_filename, index=False)
 
 
-def save_stage1_fit_outputs(out_dir, T, V_prime, x_full, pack):
+def save_stage1_fit_outputs(out_dir, T, V_prime, x_full, pack, predict_fn):
     f_pred = save_vprime_fit_plots(
         out_dir=out_dir,
         T=T,
         V_prime=V_prime,
         x_full=x_full,
         pack=pack,
+        predict_fn=predict_fn,
         plot_filename="stage1_global_fit.png",
-        title="Stage 1 global fit"
+        title="Stage 1 global fit",
     )
 
     save_vprime_fit_data(
@@ -61,21 +73,22 @@ def save_stage1_fit_outputs(out_dir, T, V_prime, x_full, pack):
         T=T,
         V_prime=V_prime,
         f_pred=f_pred,
-        csv_filename="stage1_fit_curves.csv"
+        csv_filename="stage1_fit_curves.csv",
     )
 
     return f_pred
 
 
-def save_final_fit_outputs(out_dir, T, V_prime, x_full, pack):
+def save_final_fit_outputs(out_dir, T, V_prime, x_full, pack, predict_fn):
     f_pred = save_vprime_fit_plots(
         out_dir=out_dir,
         T=T,
         V_prime=V_prime,
         x_full=x_full,
         pack=pack,
+        predict_fn=predict_fn,
         plot_filename="final_global_fit.png",
-        title="Final global fit"
+        title="Final global fit",
     )
 
     save_vprime_fit_data(
@@ -83,7 +96,7 @@ def save_final_fit_outputs(out_dir, T, V_prime, x_full, pack):
         T=T,
         V_prime=V_prime,
         f_pred=f_pred,
-        csv_filename="final_fit_curves.csv"
+        csv_filename="final_fit_curves.csv",
     )
 
     return f_pred
